@@ -4,11 +4,13 @@ from sqlalchemy import select
 from app.dependencies import get_settings
 from app.models.user_model import User
 from app.services.user_service import UserService
+from unittest.mock import AsyncMock, patch
 
 pytestmark = pytest.mark.asyncio
 
 # Test creating a user with valid data
-async def test_create_user_with_valid_data(db_session, email_service):
+@patch("app.services.email_service.SMTPClient.send_email", new_callable=AsyncMock)
+async def test_create_user_with_valid_data(mock_send, db_session, email_service):
     user_data = {
         "email": "valid_user@example.com",
         "password": "ValidPassword123!",
@@ -16,6 +18,7 @@ async def test_create_user_with_valid_data(db_session, email_service):
     user = await UserService.create(db_session, user_data, email_service)
     assert user is not None
     assert user.email == user_data["email"]
+    mock_send.assert_called_once()
 
 # Test creating a user with invalid data
 async def test_create_user_with_invalid_data(db_session, email_service):
@@ -95,9 +98,13 @@ async def test_register_user_with_valid_data(db_session, email_service):
         "email": "register_valid_user@example.com",
         "password": "RegisterValid123!",
     }
-    user = await UserService.register_user(db_session, user_data, email_service)
+
+    with patch.object(email_service, 'send_verification_email', new=AsyncMock()) as mock_send_email:
+        user = await UserService.register_user(db_session, user_data, email_service)
+
     assert user is not None
     assert user.email == user_data["email"]
+    mock_send_email.assert_called_once_with(user)
 
 # Test attempting to register a user with invalid data
 async def test_register_user_with_invalid_data(db_session, email_service):
@@ -132,7 +139,7 @@ async def test_account_lock_after_failed_logins(db_session, verified_user):
     max_login_attempts = get_settings().max_login_attempts
     for _ in range(max_login_attempts):
         await UserService.login_user(db_session, verified_user.email, "wrongpassword")
-    
+
     is_locked = await UserService.is_account_locked(db_session, verified_user.email)
     assert is_locked, "The account should be locked after the maximum number of failed login attempts."
 
