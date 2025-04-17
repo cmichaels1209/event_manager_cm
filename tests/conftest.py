@@ -264,16 +264,16 @@ def login_request_data():
 
 @pytest.fixture
 async def user_token(user):
-    payload = {"sub": str(user.id), "role": str(user.role).upper()}
+    payload = {"sub": str(user.id), "role": user.role.value}
     return create_access_token(data=payload)
 
 @pytest.fixture
 async def admin_token(admin_user):
-    payload = {"sub": str(admin_user.id), "role": str(admin_user.role).upper()}
+    payload = {"sub": str(admin_user.id), "role": admin_user.role.value}
     return create_access_token(data=payload)
 
 @pytest.fixture
 async def manager_token(manager_user):
-    payload = {"sub": str(manager_user.id), "role": str(manager_user.role).upper()}
+    payload = {"sub": str(manager_user.id), "role": manager_user.role.value}
     return create_access_token(data=payload)
 
